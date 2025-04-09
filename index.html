@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Short Text Converter</title>
+    <style>
+      textarea {
+        display: block;
+        margin-bottom: 1em;
+      }
+
+      form {
+        margin-bottom: 2em;
+      }
+
+      .nav-btns {
+        margin-top: 1em;
+        margin-bottom: 0.5em;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      #description {
+        margin-bottom: 2em;
+      }
+
+      .modal-bg {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+
+      .modal {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border: 1px solid #000;
+        border-radius: 10%;
+        padding: 1em;
+        text-align: center;
+        background-color: white;
+        width: fit-content;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TODO:
+      +++ 1. CLEAR button which shows up if there are some texts.
+      +++ 2. i18n.
+      +++ 3. Description which shows up if there are no texts.
+      4. Add buttons "Save to JSON..." and "Load from JSON...".
+      +++ 5. Use pop-up instead of confirm.
+      6. Publish.
+      +++ 7. Probably don't show caption, other textarea and navigation buttons when text is short enough.
+      8. Probably make possibility to turn double line-breaks into an automatic new message (checkbox for all or for each?).
+      9. Probably add possibility not to put a space after caption (checkbox for each element).
+      10. Probably add |<< and >>| navigation buttons (or call it FIRST and LAST), but not to make navigation too messy (maybe just FIRST).
+      11. Add link to website.
+      12. Think of what to do with te caption when text is shortened back to 1-part.
+      13. Add global messages' calculator.
+     -->
+    <h1>
+      <span id="title"></span>
+      <select id="lang"></select>
+    </h1>
+    <div id="description"></div>
+    <button type="button" data-action="add"></button>
+    <button type="button" data-action="clear"></button>
+
+    <div class="modal-bg">
+      <div class="modal">
+        <p id="question"></p>
+        <button type="button" data-action="yes"></button>
+        <button type="button" data-action="no"></button>
+      </div>
+    </div>
+
+    <script>
+      const COLS = 100;
+      const ROWS = 3;
+      const MAX_LENGTH = COLS * ROWS;
+
+      const MORE_ROWS = 10;
+      const CONFIRM_TEXT_LENGTH = 30;
+
+      const SEPARATORS = {
+        " ": {},
+        "-": {
+          append: true,
+        },
+      };
+
+      const Q = {
+        ADD: "[data-action=add]",
+        CAPTION: "[name=caption]",
+        CAPTION_LABEL: "[for=caption]",
+        CLEAR: "[data-action=clear]",
+        COPY: "[data-action=copy]",
+        DELETE: "[data-action=delete]",
+        DESCRIPTION: "#description",
+        FORM: "form[data-index]",
+        LANG: "#lang",
+        LEN: "[data-name=len]",
+        MODAL_BG: ".modal-bg",
+        NEXT: "[data-action=next]",
+        NO: "[data-action=no]",
+        PREV: "[data-action=prev]",
+        PREV_NEXT: ".nav-btns",
+        QUESTION: "#question",
+        RESULT: "[name=result]",
+        TEXT: "[name=text]",
+        TITLE: "#title",
+        YES: "[data-action=yes]",
+      };
+
+      const TAB_STOPPABLE = [
+        Q.ADD,
+        Q.CAPTION,
+        Q.CLEAR,
+        Q.COPY,
+        Q.DELETE,
+        Q.LANG,
+        Q.NEXT,
+        Q.PREV,
+        Q.RESULT,
+        Q.TEXT,
+      ];
+
+      const ONLY_FOR_LONG_TEXTS = [
+        Q.CAPTION,
+        Q.CAPTION_LABEL,
+        Q.PREV_NEXT,
+        Q.RESULT,
+      ];
+
+      const I18N = {
+        en: {
+          ADD: "Add Text",
+          CAPTION_LABEL: "Caption: ",
+          DESCRIPTION: `This utility converts long texts to short messages with maximum length of
+      ${MAX_LENGTH}.<br />
+      Caption is a short text which helps to identify your message's parts in
+      the flow.<br />
+      For one-part message the caption is ignored, but is still saved.<br />
+      The utility doesn't use cookies, but uses localStorage to avoid losing information
+      on page reload.<br />
+      If you don't want your browser to keep your texts forever, use the
+      incognito mode.<br />
+      No data is sent to any server, it's only stored on your device anyway.`,
+          CLEAR: "Clear",
+          COPY: "Copy",
+          DELETE: "Delete",
+          NO: "No",
+          TITLE: "Text-to-Message Converter",
+          YES: "Yes",
+
+          CONFIRM_DELETE1: "Delete the text",
+          CONFIRM_DELETE_ALL: "Delete all the texts?",
+        },
+        ru: {
+          ADD: "Добавить текст",
+          CAPTION_LABEL: "Название: ",
+          DESCRIPTION: `Эта утилита преобразует длинные тексты в сообщения с максимальной длиной ${MAX_LENGTH}.<br />
+Название - это короткий текст, который помогает идентифицировать части Вашего сообщения в потоке.<br />
+Название одночастного сообщения игнорируется, но всё ещё сохраняется.<br />
+Утилита не использует куки, но использует localStorage, чтобы предотвратить потерю информации при перезагрузке страницы.<br />
+Если Вы не хотите, чтобы Ваш браузер вечно хранил Ваши тексты, используйте режим инкогнито.<br />
+В любом случае, никакие данные не отправляются ни на какой сервер, всё хранится на Вашем устройстве.`,
+          CLEAR: "Очистить",
+          COPY: "Копировать",
+          DELETE: "Удалить",
+          NO: "Нет",
+          TITLE: "Преобразователь текстов в сообщения",
+          YES: "Да",
+
+          CONFIRM_DELETE1: "Удалить текст",
+          CONFIRM_DELETE_ALL: "Удалить все тексты?",
+        },
+        uk: {
+          ADD: "Додати текст",
+          CAPTION_LABEL: "Назва: ",
+          DESCRIPTION: `Ця утіліта перетворює довгі тексти в повідомлення з максимальною довжиною ${MAX_LENGTH}.<br />
+Назва - це короткий текст, що допомагає ідентифікувати частини Вашого повідомлення в потоці.<br />
+Назва одночастинного повідомлення ігнорується, але все ще зберігається.<br />
+Утіліта не використовує кукі, але використовує localStorage, що запобігає втраті інформації при перезавантаженні сторінки.<br />
+Якщо ви не бажаєте, щоби Ваш браузер вічно зберігав Ваші тексти, використовуйте режим інкогніто.<br />
+В будь-якому разі, жодні дані не відправляються ні на який сервер, все зберігається на Вашому пристрої.`,
+          CLEAR: "Очистити",
+          COPY: "Копіювати",
+          DELETE: "Видалити",
+          NO: "Ні",
+          TITLE: "Перетворювач текстів у повідомлення",
+          YES: "Так",
+
+          CONFIRM_DELETE1: "Видалити текст",
+          CONFIRM_DELETE_ALL: "Видалити всі тексти?",
+        },
+      };
+
+      const LOCALSTORAGE_DATA_NAME = "shortTextConverterData";
+      const LOCALSTORAGE_PARAM_NAME = "shortTextConverterParam";
+
+      const btnAdd = document.querySelector(Q.ADD);
+      const btnClear = document.querySelector(Q.CLEAR);
+      const description = document.querySelector(Q.DESCRIPTION);
+      const selectLang = document.querySelector(Q.LANG);
+      const modalBg = document.querySelector(Q.MODAL_BG);
+      const pQuestion = document.querySelector(Q.QUESTION);
+
+      i18nInit();
+      i18n();
+
+      const state = [];
+      let currentYesAction = () => {};
+
+      loadFromJSON(localStorage.getItem(LOCALSTORAGE_DATA_NAME));
+      reloadAllForms();
+
+      document.addEventListener("input", (e) => {
+        if (e.target.id == "lang") {
+          i18n();
+        } else if (
+          updateState(e.target, (formState, form) => {
+            formState.fragments = formToFragments(form);
+          })
+        ) {
+          localSave();
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (e.target.dataset) {
+          switch (e.target.dataset.action) {
+            case "copy":
+              let txtElem = e.target.parentNode.querySelector(Q.RESULT);
+              if (txtElem.style.display == "none") {
+                txtElem = e.target.parentNode.querySelector(Q.TEXT);
+              }
+              txtElem.select();
+              document.execCommand("copy");
+              break;
+            case "prev":
+              updateState(e.target, (formState) => {
+                formState.index--;
+              });
+              localSave();
+              break;
+            case "next":
+              updateState(e.target, (formState) => {
+                formState.index++;
+              });
+              localSave();
+              break;
+            case "add":
+              addItem();
+              reloadAllForms();
+              localSave();
+              break;
+            case "clear":
+              clear();
+              break;
+            case "delete":
+              deleteItem(e.target);
+              break;
+            case "yes":
+              answer(true);
+              break;
+            case "no":
+              answer(false);
+              break;
+          }
+        }
+      });
+
+      function removeLineBreaks(form) {
+        const textArea = form.querySelector(Q.TEXT);
+        let editedText = "";
+        let wasLineBreak = false;
+        for (const curChar of textArea.value) {
+          if (curChar === "\n") {
+            wasLineBreak = true;
+          } else {
+            if (wasLineBreak) {
+              editedText += " ";
+            }
+            editedText += curChar;
+            wasLineBreak = false;
+          }
+        }
+
+        return editedText;
+      }
+
+      function formToFragments(form) {
+        const txtCaption = form.querySelector(Q.CAPTION);
+        let editedText = removeLineBreaks(form);
+        const fragments = [];
+
+        if (editedText.length <= MAX_LENGTH) {
+          fragments.push(editedText);
+        } else {
+          const textBeforeNumbers = txtCaption.value
+            ? txtCaption.value + " "
+            : "";
+          const introLengthWithoutNumbers = textBeforeNumbers.length + 3; // + slash + colon + space
+
+          let lastNumberLength = String(
+            Math.ceil(
+              editedText.length / (MAX_LENGTH - introLengthWithoutNumbers - 2)
+            )
+          ).length; //-2 because at least 2 digits are needed to identify the fragment
+
+          editedText += Object.keys(SEPARATORS)[0]; // otherwise the last word will be ignored
+
+          let redo;
+          do {
+            redo = false;
+            let currentWord = "";
+            let newLastNumberLength;
+            let curFreeLength;
+            let prevSep = "";
+
+            let currentFragment = 0;
+            fragments[0] = "";
+            curFreeLength =
+              MAX_LENGTH -
+              introLengthWithoutNumbers -
+              lastNumberLength -
+              String(currentFragment + 1).length;
+
+            for (const curChar of editedText) {
+              if (SEPARATORS[curChar]) {
+                if (SEPARATORS[curChar].append) {
+                  currentWord += curChar;
+                }
+
+                if (
+                  fragments[currentFragment].length +
+                    prevSep.length +
+                    currentWord.length >
+                  curFreeLength
+                ) {
+                  currentFragment++;
+                  fragments[currentFragment] = currentWord;
+                  newLastNumberLength = String(fragments.length).length;
+                  if (newLastNumberLength > lastNumberLength) {
+                    lastNumberLength = newLastNumberLength;
+                    redo = true;
+                    break;
+                  }
+
+                  curFreeLength =
+                    MAX_LENGTH -
+                    introLengthWithoutNumbers -
+                    lastNumberLength -
+                    String(currentFragment + 1).length;
+                  prevSep = "";
+                } else {
+                  fragments[currentFragment] += prevSep;
+                  fragments[currentFragment] += currentWord;
+                }
+                prevSep = SEPARATORS[curChar].append ? "" : curChar;
+                currentWord = "";
+              } else {
+                currentWord += curChar;
+              }
+            }
+          } while (redo);
+          for (let i = 0; i < fragments.length; i++) {
+            fragments[i] = `${textBeforeNumbers}${i + 1}/${fragments.length}: ${
+              fragments[i]
+            }`;
+          }
+        }
+
+        return fragments;
+      }
+
+      function updateState(fromElement, doBeforeUpdate) {
+        const form = fromElement.closest(Q.FORM);
+        if (!form) return false;
+        const formIndex = Number(form.dataset.index);
+        if (isNaN(formIndex)) return false;
+
+        if (!state[formIndex]) {
+          state[formIndex] = {};
+        }
+        const formState = state[formIndex];
+
+        const btnPrev = form.querySelector(Q.PREV);
+        const btnNext = form.querySelector(Q.NEXT);
+        const txtResult = form.querySelector(Q.RESULT);
+        const spanLen = form.querySelector(Q.LEN);
+
+        if (typeof doBeforeUpdate === "function") {
+          doBeforeUpdate(formState, form);
+        }
+
+        const maxFragIndex = formState.fragments.length - 1;
+        if (formState.index >= formState.fragments.length) {
+          formState.index = maxFragIndex;
+        } else if (formState.index < 0) {
+          formState.index = 0;
+        }
+
+        btnPrev.disabled = formState.index == 0;
+        btnNext.disabled = formState.index == maxFragIndex;
+
+        txtResult.value = formState.fragments[formState.index];
+        spanLen.innerText = txtResult.value.length;
+
+        const display = formState.fragments.length > 1 ? "" : "none";
+        for (const query of ONLY_FOR_LONG_TEXTS) {
+          form.querySelector(query).style.display = display;
+        }
+
+        return true;
+      }
+
+      // TODO: maybe it's a temporary solution
+      function reloadAllForms() {
+        document.querySelectorAll(Q.FORM).forEach((form) =>
+          updateState(form, (formState, form) => {
+            if (!formState.fragments) {
+              formState.fragments = formToFragments(form);
+            }
+          })
+        );
+
+        if (state.length) {
+          description.classList.add("hidden");
+          btnClear.classList.remove("hidden");
+        } else {
+          description.classList.remove("hidden");
+          btnClear.classList.add("hidden");
+        }
+      }
+
+      // TODO: maybe add in arbitrary place
+      function addItem(text = "", caption = "", fragIndex = 0) {
+        btnAdd.insertAdjacentHTML(
+          "beforebegin",
+          formTemplate(state.length, text, caption)
+        );
+        state.push({ index: fragIndex });
+      }
+
+      function deleteItem(fromElement) {
+        const form = fromElement.closest(Q.FORM);
+        let textName = form.querySelector(Q.CAPTION).value;
+        if (!textName) {
+          textName = removeLineBreaks(form);
+          if (textName.length > CONFIRM_TEXT_LENGTH) {
+            textName = textName.slice(0, CONFIRM_TEXT_LENGTH) + "...";
+          }
+        }
+
+        ask(
+          `${I18N[selectLang.value].CONFIRM_DELETE1} "${textName}"?`,
+          () => {
+            const index = Number(form.dataset.index);
+            state.splice(index, 1);
+            form.remove();
+
+            const forms = document.querySelectorAll(Q.FORM);
+            for (let i = index; i < forms.length; i++) {
+              forms[i].dataset.index = i;
+            }
+
+            reloadAllForms(); // for visibility change
+            localSave();
+          },
+          !textName
+        );
+      }
+
+      function clear() {
+        ask(I18N[selectLang.value].CONFIRM_DELETE_ALL, () => {
+          document.querySelectorAll(Q.FORM).forEach((form) => form.remove());
+          state.splice(0);
+
+          reloadAllForms(); // for visibility change
+          localSave();
+        });
+      }
+
+      function formTemplate(index, text, caption) {
+        const LOCALE = I18N[selectLang.value];
+
+        return `<form action="" data-index="${index}">
+      <textarea name="text" cols="${COLS}" rows="${MORE_ROWS}">${text}</textarea>
+      <label for="caption">${LOCALE.CAPTION_LABEL}</label><input type="text" name="caption" value="${caption}" />
+      <button type="button" data-action="delete">${LOCALE.DELETE}</button>
+      <div class="nav-btns">
+        <button type="button" data-action="prev">&lt;</button>
+        <button type="button" data-action="next">&gt;</button>
+      </div>
+      <textarea
+        cols="${COLS}"
+        rows="${ROWS}"
+        readonly
+        name="result"
+      ></textarea>
+      <button type="button" data-action="copy">${LOCALE.COPY}</button>
+      <span data-name="len"></span>/<span>${MAX_LENGTH}</span>
+    </form>`;
+      }
+
+      function loadFromJSON(json) {
+        try {
+          const ar = JSON.parse(json);
+          if (!Array.isArray(ar)) {
+            return false;
+          }
+
+          for (const el of ar) {
+            addItem(el.text, el.caption, el.index);
+          }
+
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function saveToJSON() {
+        const outputAr = new Array(state.length);
+        const forms = document.querySelectorAll(Q.FORM);
+        for (let i = 0; i < state.length; i++) {
+          outputAr[i] = {
+            text: forms[i].querySelector(Q.TEXT).value,
+            caption: forms[i].querySelector(Q.CAPTION).value,
+            index: state[i].index,
+          };
+        }
+
+        return JSON.stringify(outputAr);
+      }
+
+      // TODO: now it's too vulnerable
+      function localSave() {
+        localStorage.setItem(LOCALSTORAGE_DATA_NAME, saveToJSON());
+      }
+
+      function i18nInit() {
+        for (const lang in I18N) {
+          selectLang.insertAdjacentHTML(
+            "beforeend",
+            `<option value="${lang}">${lang.toUpperCase()}</option>`
+          );
+        }
+
+        let defaultLang = localStorage.getItem(LOCALSTORAGE_PARAM_NAME);
+        if (!I18N[defaultLang]) {
+          defaultLang = navigator.language?.slice(0, 2);
+          if (!I18N[defaultLang]) {
+            defaultLang = "";
+            if (Array.isArray(navigator.languages)) {
+              for (let lang of navigator.languages) {
+                lang = lang.slice(0, 2);
+                if (I18N[lang]) {
+                  defaultLang = lang;
+                  break;
+                }
+              }
+            }
+            if (!defaultLang) {
+              defaultLang = Object.keys(I18N)[0];
+            }
+          }
+        }
+        selectLang.value = defaultLang;
+      }
+
+      function i18n() {
+        const LOCALE = I18N[selectLang.value];
+        for (const id in LOCALE) {
+          document.querySelectorAll(Q[id])?.forEach((elem) => {
+            elem.innerHTML = LOCALE[id];
+          });
+        }
+
+        localStorage.setItem(LOCALSTORAGE_PARAM_NAME, selectLang.value);
+      }
+
+      function ask(question, yesAction, autoYes) {
+        if (autoYes) {
+          yesAction();
+
+          return;
+        }
+
+        pQuestion.innerHTML = question;
+        modalBg.style.display = "block";
+        currentYesAction = yesAction;
+        setTabIndexes(-1);
+      }
+
+      function answer(yes) {
+        modalBg.style.display = "none";
+        if (yes) currentYesAction();
+        setTabIndexes(0);
+      }
+
+      function setTabIndexes(value) {
+        for (const query of TAB_STOPPABLE) {
+          document.querySelectorAll(query).forEach((elem) => {
+            elem.tabIndex = value;
+          });
+        }
+      }
+    </script>
+  </body>
+</html>
