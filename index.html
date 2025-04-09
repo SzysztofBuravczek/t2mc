@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Short Text Converter</title>
+    <title>Text-to-Message Converter</title>
     <style>
       textarea {
         display: block;
@@ -224,6 +224,7 @@
       const selectLang = document.querySelector(Q.LANG);
       const modalBg = document.querySelector(Q.MODAL_BG);
       const pQuestion = document.querySelector(Q.QUESTION);
+      const pageTitle = document.querySelector("title");
 
       i18nInit();
       i18n();
@@ -597,6 +598,7 @@
             elem.innerHTML = LOCALE[id];
           });
         }
+        pageTitle.innerText = LOCALE.TITLE;
 
         localStorage.setItem(LOCALSTORAGE_PARAM_NAME, selectLang.value);
       }
