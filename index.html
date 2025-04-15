@@ -78,13 +78,16 @@
       10. Probably add |<< and >>| navigation buttons (or call it FIRST and LAST), but not to make navigation too messy (maybe just FIRST).
       +++ 11. Add link to website.
       12. Think of what to do with te caption when text is shortened back to 1-part.
-      13. Add global messages' calculator.
+      +++ 13. Add global messages' calculator.
      -->
     <h1>
       <span id="title"></span>
       <select id="lang"></select>
     </h1>
     <div id="description"></div>
+    <p id="counter">
+      <span id="counterAmount"></span> <span id="counterDescription"></span>.
+    </p>
     <button type="button" data-action="add"></button>
     <button type="button" data-action="clear"></button>
     <p id="author"></p>
@@ -117,6 +120,9 @@
         AUTHOR: "#author",
         CAPTION: "[name=caption]",
         CAPTION_LABEL: "[for=caption]",
+        COUNTER: "#counter",
+        COUNTER_AMOUNT: "#counterAmount",
+        COUNTER_DESCRIPTION: "#counterDescription",
         CLEAR: "[data-action=clear]",
         COPY: "[data-action=copy]",
         DELETE: "[data-action=delete]",
@@ -156,12 +162,28 @@
         Q.RESULT,
       ];
 
+      const LOCALSTORAGE_DATA_NAME = "shortTextConverterData";
+      const LOCALSTORAGE_PARAM_NAME = "shortTextConverterParam";
+
+      const btnAdd = document.querySelector(Q.ADD);
+      const btnClear = document.querySelector(Q.CLEAR);
+      const description = document.querySelector(Q.DESCRIPTION);
+      const counter = document.querySelector(Q.COUNTER);
+      const counterAmount = document.querySelector(Q.COUNTER_AMOUNT);
+      const counterDescription = document.querySelector(Q.COUNTER_DESCRIPTION);
+      const selectLang = document.querySelector(Q.LANG);
+      const modalBg = document.querySelector(Q.MODAL_BG);
+      const pQuestion = document.querySelector(Q.QUESTION);
+      const pageTitle = document.querySelector("title");
+
       const I18N = {
         en: {
           ADD: "Add Text",
           AUTHOR:
             'Created by independent musician <b><a href="../en/info/">Szysztof Buravczek</a></b> whose work can be found <a href="../en/">here</a>.',
           CAPTION_LABEL: "Caption: ",
+          COUNTER_DESCRIPTION: () =>
+            counterAmount.innerHTML == "1" ? "message" : "messages",
           DESCRIPTION: `This utility converts long texts to short messages with maximum length of
       ${MAX_LENGTH}.<br />
       Caption is a short text which helps to identify your message's parts in
@@ -187,6 +209,13 @@
           AUTHOR:
             'Создано независимым музыкантом <b><a href="../ru/info/">Шиштофом Буравчеком</a></b>, с творчеством которого можно ознакомиться <a href="../ru/">здесь</a>.',
           CAPTION_LABEL: "Название: ",
+          COUNTER_DESCRIPTION: () =>
+            counterAmount.innerHTML == "1"
+              ? "сообщение"
+              : counterAmount.innerHTML != "0" &&
+                Number(counterAmount.innerHTML) < 5
+              ? "сообщения"
+              : "сообщений",
           DESCRIPTION: `Эта утилита преобразует длинные тексты в сообщения с максимальной длиной ${MAX_LENGTH}.<br />
 Название - это короткий текст, который помогает идентифицировать части Вашего сообщения в потоке.<br />
 Название одночастного сообщения игнорируется, но всё ещё сохраняется.<br />
@@ -208,6 +237,10 @@
           AUTHOR:
             'Створено незалежним музикантом <b><a href="../uk/info/">Шиштофом Буравчеком</a></b>, з творчістю якого можна ознайомитися <a href="../uk/">тут</a>.',
           CAPTION_LABEL: "Назва: ",
+          COUNTER_DESCRIPTION: () =>
+            Number(counterAmount.innerHTML) < 5
+              ? "повідомлення"
+              : "повідомлень",
           DESCRIPTION: `Ця утіліта перетворює довгі тексти в повідомлення з максимальною довжиною ${MAX_LENGTH}.<br />
 Назва - це короткий текст, що допомагає ідентифікувати частини Вашого повідомлення в потоці.<br />
 Назва одночастинного повідомлення ігнорується, але все ще зберігається.<br />
@@ -225,17 +258,6 @@
           CONFIRM_DELETE_ALL: "Видалити всі тексти?",
         },
       };
-
-      const LOCALSTORAGE_DATA_NAME = "shortTextConverterData";
-      const LOCALSTORAGE_PARAM_NAME = "shortTextConverterParam";
-
-      const btnAdd = document.querySelector(Q.ADD);
-      const btnClear = document.querySelector(Q.CLEAR);
-      const description = document.querySelector(Q.DESCRIPTION);
-      const selectLang = document.querySelector(Q.LANG);
-      const modalBg = document.querySelector(Q.MODAL_BG);
-      const pQuestion = document.querySelector(Q.QUESTION);
-      const pageTitle = document.querySelector("title");
 
       i18nInit();
       i18n();
@@ -444,6 +466,14 @@
           form.querySelector(query).style.display = display;
         }
 
+        let totalCount = 0;
+        for (const curState of state) {
+          if (curState.fragments) totalCount += curState.fragments.length;
+        }
+        counterAmount.innerHTML = totalCount;
+        counterDescription.innerHTML =
+          I18N[selectLang.value].COUNTER_DESCRIPTION();
+
         return true;
       }
 
@@ -459,9 +489,11 @@
 
         if (state.length) {
           description.classList.add("hidden");
+          counter.classList.remove("hidden");
           btnClear.classList.remove("hidden");
         } else {
           description.classList.remove("hidden");
+          counter.classList.add("hidden");
           btnClear.classList.add("hidden");
         }
       }
@@ -606,7 +638,8 @@
         const LOCALE = I18N[selectLang.value];
         for (const id in LOCALE) {
           document.querySelectorAll(Q[id])?.forEach((elem) => {
-            elem.innerHTML = LOCALE[id];
+            elem.innerHTML =
+              typeof LOCALE[id] === "function" ? LOCALE[id]() : LOCALE[id];
           });
         }
         pageTitle.innerText = LOCALE.TITLE;
