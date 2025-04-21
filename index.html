@@ -65,21 +65,6 @@
     </style>
   </head>
   <body>
-    <!-- TODO:
-      +++ 1. CLEAR button which shows up if there are some texts.
-      +++ 2. i18n.
-      +++ 3. Description which shows up if there are no texts.
-      4. Add buttons "Save to JSON..." and "Load from JSON...".
-      +++ 5. Use pop-up instead of confirm.
-      +++ 6. Publish.
-      +++ 7. Probably don't show caption, other textarea and navigation buttons when text is short enough.
-      8. Probably make possibility to turn double line-breaks into an automatic new message (checkbox for all or for each?).
-      9. Probably add possibility not to put a space after caption (checkbox for each element).
-      10. Probably add |<< and >>| navigation buttons (or call it FIRST and LAST), but not to make navigation too messy (maybe just FIRST).
-      +++ 11. Add link to website.
-      12. Think of what to do with te caption when text is shortened back to 1-part.
-      +++ 13. Add global messages' calculator.
-     -->
     <h1>
       <span id="title"></span>
       <select id="lang"></select>
@@ -101,6 +86,8 @@
     </div>
 
     <script>
+      const AUTHOR_SITE = "https://szysztofburavczek.github.io/";
+
       const COLS = 100;
       const ROWS = 3;
       const MAX_LENGTH = COLS * ROWS;
@@ -179,8 +166,7 @@
       const I18N = {
         en: {
           ADD: "Add Text",
-          AUTHOR:
-            'Created by independent musician <b><a href="../en/info/">Szysztof Buravczek</a></b> whose work can be found <a href="../en/">here</a>.',
+          AUTHOR: `Created by independent musician <b><a href="${AUTHOR_SITE}en/info/">Szysztof Buravczek</a></b> whose work can be found <a href="${AUTHOR_SITE}en/">here</a>.`,
           CAPTION_LABEL: "Caption: ",
           COUNTER_DESCRIPTION: () =>
             counterAmount.innerHTML == "1" ? "message" : "messages",
@@ -193,7 +179,8 @@
       on page reload.<br />
       If you don't want your browser to keep your texts forever, use the
       incognito mode.<br />
-      No data is sent to any server, it's only stored on your device anyway.`,
+      No data is sent to any server, it's only stored on your device anyway.<br />
+      You can save this page and use it offline.`,
           CLEAR: "Clear",
           COPY: "Copy",
           DELETE: "Delete",
@@ -206,8 +193,7 @@
         },
         ru: {
           ADD: "Добавить текст",
-          AUTHOR:
-            'Создано независимым музыкантом <b><a href="../ru/info/">Шиштофом Буравчеком</a></b>, с творчеством которого можно ознакомиться <a href="../ru/">здесь</a>.',
+          AUTHOR: `Создано независимым музыкантом <b><a href="${AUTHOR_SITE}ru/info/">Шиштофом Буравчеком</a></b>, с творчеством которого можно ознакомиться <a href="${AUTHOR_SITE}ru/">здесь</a>.`,
           CAPTION_LABEL: "Название: ",
           COUNTER_DESCRIPTION: () =>
             counterAmount.innerHTML == "1"
@@ -221,7 +207,8 @@
 Название одночастного сообщения игнорируется, но всё ещё сохраняется.<br />
 Утилита не использует куки, но использует localStorage, чтобы предотвратить потерю информации при перезагрузке страницы.<br />
 Если Вы не хотите, чтобы Ваш браузер вечно хранил Ваши тексты, используйте режим инкогнито.<br />
-В любом случае, никакие данные не отправляются ни на какой сервер, всё хранится на Вашем устройстве.`,
+В любом случае, никакие данные не отправляются ни на какой сервер, всё хранится на Вашем устройстве.<br />
+Страницу можно сохранить и использовать оффлайн.`,
           CLEAR: "Очистить",
           COPY: "Копировать",
           DELETE: "Удалить",
@@ -234,8 +221,7 @@
         },
         uk: {
           ADD: "Додати текст",
-          AUTHOR:
-            'Створено незалежним музикантом <b><a href="../uk/info/">Шиштофом Буравчеком</a></b>, з творчістю якого можна ознайомитися <a href="../uk/">тут</a>.',
+          AUTHOR: `Створено незалежним музикантом <b><a href="${AUTHOR_SITE}uk/info/">Шиштофом Буравчеком</a></b>, з творчістю якого можна ознайомитися <a href="${AUTHOR_SITE}uk/">тут</a>.`,
           CAPTION_LABEL: "Назва: ",
           COUNTER_DESCRIPTION: () =>
             Number(counterAmount.innerHTML) < 5
@@ -246,7 +232,8 @@
 Назва одночастинного повідомлення ігнорується, але все ще зберігається.<br />
 Утіліта не використовує кукі, але використовує localStorage, що запобігає втраті інформації при перезавантаженні сторінки.<br />
 Якщо ви не бажаєте, щоби Ваш браузер вічно зберігав Ваші тексти, використовуйте режим інкогніто.<br />
-В будь-якому разі, жодні дані не відправляються ні на який сервер, все зберігається на Вашому пристрої.`,
+В будь-якому разі, жодні дані не відправляються ні на який сервер, все зберігається на Вашому пристрої.<br />
+Сторінку можно зберігти й використовувати офлайн.`,
           CLEAR: "Очистити",
           COPY: "Копіювати",
           DELETE: "Видалити",

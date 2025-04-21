@@ -1,0 +1,13 @@
++++ 1. CLEAR button which shows up if there are some texts.
++++ 2. i18n.
++++ 3. Description which shows up if there are no texts.
+4. Add buttons "Save to JSON..." and "Load from JSON...".
++++ 5. Use pop-up instead of confirm.
++++ 6. Publish.
++++ 7. Probably don't show caption, other textarea and navigation buttons when text is short enough.
+8. Probably make possibility to turn double line-breaks into an automatic new message (checkbox for all or for each?).
+9. Probably add possibility not to put a space after caption (checkbox for each element).
+10. Probably add |<< and >>| navigation buttons (or call it FIRST and LAST), but not to make navigation too messy (maybe just FIRST).
++++ 11. Add link to website.
+12. Think of what to do with te caption when text is shortened back to 1-part.
++++ 13. Add global messages' calculator.
